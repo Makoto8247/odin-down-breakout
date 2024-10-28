@@ -8,22 +8,29 @@ SCREEN_HEIGHT :: 600
 SCREEN_WIDTH :: 300
 
 PLAYER_SPEED :: 200
+PLAYER_HEIGHT :: 10
+PLAYER_WIDTH :: 60
+PLAYER_POSY :: 450
 
 BALL_SPEED :: 300
 BALL_R :: 10
 
+BLOCK_HEIGHT :: 15
+BLOCK_WIDTH :: 40
+
 normalize_vector:: proc(v: rl.Vector2) -> rl.Vector2 {
     length := math.sqrt_f32(math.pow_f32(v.x, 2) + math.pow_f32(v.y, 2))
-    return rl.Vector2{v.x / length, v.y / length}
+    return rl.Vector2{v.x / length, v.y / length} * math.sqrt_f32(2)
 }
 
 main :: proc() {
     rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Down Breakout")
     rl.SetTargetFPS(60)
 
-    playerRec := rl.Rectangle{0, 450, 60, 10}
+    playerRec := rl.Rectangle{0, PLAYER_POSY, PLAYER_WIDTH, PLAYER_HEIGHT}
     ballPos := rl.Vector2{SCREEN_WIDTH/2, SCREEN_HEIGHT/2}
     ballVec := rl.Vector2{1, 1}
+    blockRec := rl.Rectangle{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, BLOCK_WIDTH, BLOCK_HEIGHT}
 
     for !rl.WindowShouldClose() {
 
@@ -62,6 +69,8 @@ main :: proc() {
         /*** Draw ***/
         rl.BeginDrawing()
         rl.ClearBackground({255, 255, 255, 0})
+
+        rl.DrawRectangleRec(blockRec, rl.GRAY)
 
         // Player Draw
         rl.DrawRectangleRec(playerRec, rl.BLUE)
