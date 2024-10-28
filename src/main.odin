@@ -28,9 +28,12 @@ main :: proc() {
     rl.SetTargetFPS(60)
 
     playerRec := rl.Rectangle{0, PLAYER_POSY, PLAYER_WIDTH, PLAYER_HEIGHT}
+
     ballPos := rl.Vector2{SCREEN_WIDTH/2, SCREEN_HEIGHT/2}
     ballVec := rl.Vector2{1, 1}
-    blockRec := rl.Rectangle{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, BLOCK_WIDTH, BLOCK_HEIGHT}
+
+    blocksRec := [dynamic]rl.Rectangle{{SCREEN_WIDTH/2, SCREEN_HEIGHT/2-50, BLOCK_WIDTH, BLOCK_HEIGHT}}
+    defer delete(blocksRec)
 
     for !rl.WindowShouldClose() {
 
@@ -66,11 +69,22 @@ main :: proc() {
         }
 
 
+        // Block Setting
+        for blockRec, index in blocksRec {
+            if rl.CheckCollisionCircleRec(ballPos, BALL_R, blockRec) {
+                ordered_remove(&blocksRec, index)
+            }
+        }
+
         /*** Draw ***/
         rl.BeginDrawing()
         rl.ClearBackground({255, 255, 255, 0})
 
-        rl.DrawRectangleRec(blockRec, rl.GRAY)
+
+        // Block Draw
+        for blockRec in blocksRec {
+            rl.DrawRectangleRec(blockRec, rl.GRAY)
+        }
 
         // Player Draw
         rl.DrawRectangleRec(playerRec, rl.BLUE)
