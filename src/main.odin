@@ -37,7 +37,7 @@ main :: proc() {
 
     for !rl.WindowShouldClose() {
 
-        // Player Setting
+        /*** Player Setting ***/
         if rl.IsKeyDown(rl.KeyboardKey.RIGHT) {
             playerRec.x += PLAYER_SPEED * rl.GetFrameTime()
         }
@@ -52,10 +52,16 @@ main :: proc() {
         if playerRec.x < 0 do playerRec.x = 0
         if playerRec.x > SCREEN_WIDTH - playerRec.width do playerRec.x = SCREEN_WIDTH - playerRec.width
 
-        // Ball Setting
+        /*** Ball Setting ***/
         ballPos += ballVec * BALL_SPEED * rl.GetFrameTime()
 
-        if ballPos.x > SCREEN_WIDTH || ballPos.x < 0 {
+        if ballPos.x > SCREEN_WIDTH {
+            ballPos.x = SCREEN_WIDTH - BALL_R
+            ballVec.x *= -1
+        }
+
+        if ballPos.x < 0 {
+            ballPos.x = BALL_R
             ballVec.x *= -1
         }
         if ballPos.y > SCREEN_HEIGHT || ballPos.y < 0 {
@@ -63,16 +69,29 @@ main :: proc() {
         }
 
         if rl.CheckCollisionCircleRec(ballPos, BALL_R, playerRec) && ballVec.y > 0{
-            theta := math.atan2_f32(ballPos.y - playerRec.y, ballPos.x - (playerRec.x + playerRec.width/2))
+            theta := math.atan2_f32(ballPos.y - (playerRec.y+playerRec.height), ballPos.x - (playerRec.x + playerRec.width/2))
             ballVec = {math.cos_f32(theta), math.sign_f32(theta)}
             ballVec = normalize_vector(ballVec)
         }
 
 
-        // Block Setting
+        /*** Block Setting ***/
         for blockRec, index in blocksRec {
             if rl.CheckCollisionCircleRec(ballPos, BALL_R, blockRec) {
                 ordered_remove(&blocksRec, index)
+                // Block Edge Hit Points
+                dx := ballPos.x - (blockRec.x + blockRec.width/2)
+                dy := ballPos.y - (blockRec.y + blockRec.height/2)
+                // left or right
+                if math.abs(dx) > math.abs(dy) {
+                    fmt.println("get")
+                    if dx > 0 do ballVec.x = math.abs(ballVec.x)
+                    else do ballVec.x = -math.abs(ballVec.x)
+                // up or bottom
+                } else {
+                    if dy > 0 do ballVec.y = math.abs(ballVec.y)
+                    else do ballVec.y = -math.abs(ballVec.y)
+                }
             }
         }
 
