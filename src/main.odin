@@ -25,49 +25,27 @@ normalize_vector :: proc(v: rl.Vector2) -> rl.Vector2 {
 
 /*
 *Determining the top, bottom, left, or right by calculating the angle formed by the diagonals and comparing that angle
-*  : right
-* 1 : top
-*  : left
-*  : bottom
 */
 detect_collision_edge :: proc(rec: rl.Rectangle, ballPos: rl.Vector2) -> i32 {
-    // Calculate the length of the diagonal
-    diagonal := math.sqrt_f32(math.pow_f32(rec.width, 2) + math.pow_f32(rec.height, 2))
+    diagonalAngle := 2 * math.atan(f64(rec.height) / f64(rec.width))
 
-    // Calculate the angle using the cosine rule
-    cosAngle := math.acos_f32((math.pow_f32(rec.width, 2) + math.pow_f32(diagonal, 2) - math.pow_f32(rec.height, 2)) / (2 * rec.width * diagonal))
+    theta := math.atan2_f64(f64(ballPos.y - (rec.y + rec.height/2)), f64(ballPos.x - (rec.x + rec.width/2)))
+    fmt.println(diagonalAngle * 180 / math.PI)
+    fmt.println((math.PI - diagonalAngle) * 180 / math.PI)
 
-    // Calculate the angle using the sine rule
-    sinAngle := math.sqrt_f32(4 * math.pow_f32(rec.width * diagonal, 2) - math.pow_f32(math.pow_f32(rec.width, 2) + math.pow_f32(diagonal, 2) - math.pow_f32(rec.height, 2), 2)) / (2 * rec.width * diagonal)
+    if theta < 0 do theta += math.TAU
 
-    // Calculate the final angle
-    finalAngle := math.acos_f32(math.pow_f32(sinAngle, 2) - math.pow_f32(cosAngle, 2))
+    fmt.println(theta * 180 / math.PI)
 
-    halfRightAngle := (math.PI - finalAngle) / 2
-
-    theta := math.atan2_f32(ballPos.y - (rec.y + rec.height/2), ballPos.x - (rec.x + rec.width/2))
-    theta -= math.PI
-    if theta < 0  do theta += math.TAU
-
-    toR :f32 = 180 / math.PI
-    fmt.printfln("ball.x: %d, ball.y: %d", i32(ballPos.x), i32(ballPos.y))
-    fmt.printfln("rec.x: %d, rec.y: %d", i32(rec.x), i32(rec.y))
-    fmt.println("ball: ", theta * toR)
-    fmt.println("1: ", (math.TAU - halfRightAngle) * toR)
-    fmt.println("2: ", (halfRightAngle) * toR)
-    fmt.println("3: ", (halfRightAngle + finalAngle) * toR)
-    fmt.println("4: ", (finalAngle + 3*halfRightAngle) * toR)
-    /*** TODO ***
-    * それぞれの角度の条件式を見直す (topは確定)
-    */
-    // left
-    if theta >= math.TAU - halfRightAngle || theta < halfRightAngle do return 3
-    // top
-    else if theta >= halfRightAngle && theta < halfRightAngle + finalAngle do return 1
-    // right
-    else if theta >= halfRightAngle + finalAngle && theta < math.TAU - (halfRightAngle + finalAngle) do return 0
-    // bottom
-    return 1
+    if theta >= 2*math.PI-diagonalAngle || theta < diagonalAngle {
+        return 0 // Right
+    } else if theta >= diagonalAngle && theta < math.PI-diagonalAngle {
+        return 1 // Top
+    } else if theta >= math.PI-diagonalAngle && theta < math.PI+diagonalAngle {
+        return 2 // Left
+    } else {
+        return 3 // Bottom
+    }
 }
 
 main :: proc() {
@@ -143,22 +121,19 @@ main :: proc() {
                 halfHeight := blockRec.height / 2
 
                 switch detect_collision_edge(blockRec, ballPos) {
-                    // left
                     case 0:
-                        fmt.println("left")
-                        ballVec.x = -abs(ballVec.x)
-                    // top
+                        fmt.println("0")
+                        ballVec.x = math.abs(ballVec.x)
                     case 1:
-                        fmt.println("top")
-                        ballVec.y = -abs(ballVec.y)
-                    // top
+                        fmt.println("1")
+                        ballVec.y = math.abs(ballVec.y)
                     case 2:
-                        fmt.println("top")
-                        ballVec.y = -abs(ballVec.y)
-                    // right
+                        fmt.println("2")
+                        ballVec.x = -math.abs(ballVec.x)
                     case 3:
-                        fmt.println("right")
-                        ballVec.x = abs(ballVec.x)
+                        fmt.println("3")
+                        ballVec.y = -math.abs(ballVec.y)
+                    
                 }
             }
         }
