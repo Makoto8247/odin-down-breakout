@@ -17,6 +17,15 @@ BALL_R :: 10
 
 BLOCK_HEIGHT :: 15
 BLOCK_WIDTH :: 40
+BLOCK_SPEED :: 50
+BLOCK_ADD_COUNT :: 60
+
+Edge:: enum {
+    TOP,
+    RIGHT,
+    BOTTOM,
+    LEFT
+}
 
 normalize_vector :: proc(v: rl.Vector2) -> rl.Vector2 {
     length := math.sqrt_f32(math.pow_f32(v.x, 2) + math.pow_f32(v.y, 2))
@@ -26,25 +35,21 @@ normalize_vector :: proc(v: rl.Vector2) -> rl.Vector2 {
 /*
 *Determining the top, bottom, left, or right by calculating the angle formed by the diagonals and comparing that angle
 */
-detect_collision_edge :: proc(rec: rl.Rectangle, ballPos: rl.Vector2) -> i32 {
+detect_collision_edge :: proc(rec: rl.Rectangle, ballPos: rl.Vector2) -> Edge {
     diagonalAngle := 2 * math.atan(f64(rec.height) / f64(rec.width))
 
     theta := math.atan2_f64(f64(ballPos.y - (rec.y + rec.height/2)), f64(ballPos.x - (rec.x + rec.width/2)))
-    fmt.println(diagonalAngle * 180 / math.PI)
-    fmt.println((math.PI - diagonalAngle) * 180 / math.PI)
 
     if theta < 0 do theta += math.TAU
 
-    fmt.println(theta * 180 / math.PI)
-
     if theta >= 2*math.PI-diagonalAngle || theta < diagonalAngle {
-        return 0 // Right
+        return .RIGHT
     } else if theta >= diagonalAngle && theta < math.PI-diagonalAngle {
-        return 1 // Top
+        return .TOP
     } else if theta >= math.PI-diagonalAngle && theta < math.PI+diagonalAngle {
-        return 2 // Left
+        return .LEFT
     } else {
-        return 3 // Bottom
+        return .BOTTOM
     }
 }
 
@@ -52,18 +57,26 @@ main :: proc() {
     rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Down Breakout")
     rl.SetTargetFPS(60)
 
+    framesCounter := 0
+
     playerRec := rl.Rectangle{0, PLAYER_POSY, PLAYER_WIDTH, PLAYER_HEIGHT}
 
     ballPos := rl.Vector2{SCREEN_WIDTH/2, SCREEN_HEIGHT/2}
     ballVec := rl.Vector2{1, 1}
 
-    blocksRec := [dynamic]rl.Rectangle{{SCREEN_WIDTH/2, SCREEN_HEIGHT/2-50, BLOCK_WIDTH, BLOCK_HEIGHT}}
+    blocksRec := [dynamic]rl.Rectangle{}
     defer delete(blocksRec)
 
     deltaTime :f32 = 0
 
     for !rl.WindowShouldClose() {
         deltaTime = rl.GetFrameTime()
+
+        framesCounter += 1
+
+        if framesCounter < 0 {
+            framesCounter = 0
+        }
 
         /*** Player Setting ***/
         if rl.IsKeyDown(rl.KeyboardKey.RIGHT) {
@@ -83,20 +96,20 @@ main :: proc() {
         /*** Ball Setting ***/
         ballPos += ballVec * BALL_SPEED * deltaTime
 
-        if ballPos.x > SCREEN_WIDTH - BALL_R/2 {
-            ballPos.x = SCREEN_WIDTH - BALL_R/2
+        if ballPos.x > SCREEN_WIDTH - BALL_R {
+            ballPos.x = SCREEN_WIDTH - BALL_R
             ballVec.x *= -1
         }
-        else if ballPos.x < 0 {
-            ballPos.x = BALL_R/2
+        else if ballPos.x < BALL_R {
+            ballPos.x = BALL_R
             ballVec.x *= -1
         }
-        else if ballPos.y > SCREEN_HEIGHT - BALL_R/2 {
-            ballPos.y = SCREEN_HEIGHT - BALL_R/2
+        else if ballPos.y > SCREEN_HEIGHT - BALL_R {
+            ballPos.y = SCREEN_HEIGHT - BALL_R
             ballVec.y *= -1
         } 
-        else if ballPos.y < 0 {
-            ballPos.y = BALL_R/2
+        else if ballPos.y < BALL_R {
+            ballPos.y = BALL_R
             ballVec.y *= -1
         }
 
@@ -108,10 +121,12 @@ main :: proc() {
 
 
         /*** Block Setting ***/
-        for blockRec, index in blocksRec {
+        if framesCounter % BLOCK_ADD_COUNT == 0 {
+            append(&blocksRec, rl.Rectangle{SCREEN_WIDTH/2, 0, BLOCK_WIDTH, BLOCK_HEIGHT})
+        }
+        #reverse for &blockRec, index in blocksRec {
             if rl.CheckCollisionCircleRec(ballPos, BALL_R, blockRec) {
                 ballPos -= ballVec * BALL_SPEED * deltaTime
-                //ordered_remove(&blocksRec, index)
                 // Block Edge Hit Points
                 dx := (blockRec.x + blockRec.width/2) - ballPos.x
                 dy := (blockRec.y + blockRec.height/2) - ballPos.y
@@ -121,20 +136,21 @@ main :: proc() {
                 halfHeight := blockRec.height / 2
 
                 switch detect_collision_edge(blockRec, ballPos) {
-                    case 0:
-                        fmt.println("0")
+                    case .RIGHT:
                         ballVec.x = math.abs(ballVec.x)
-                    case 1:
-                        fmt.println("1")
+                    case .TOP:
                         ballVec.y = math.abs(ballVec.y)
-                    case 2:
-                        fmt.println("2")
+                    case .LEFT:
                         ballVec.x = -math.abs(ballVec.x)
-                    case 3:
-                        fmt.println("3")
+                    case .BOTTOM:
                         ballVec.y = -math.abs(ballVec.y)
-                    
                 }
+                ordered_remove(&blocksRec, index)
+                continue
+            }
+            blockRec.y += BLOCK_SPEED * deltaTime
+            if blockRec.y > SCREEN_HEIGHT {
+                ordered_remove(&blocksRec, index)
             }
         }
 
