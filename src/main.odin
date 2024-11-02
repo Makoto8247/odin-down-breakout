@@ -3,6 +3,7 @@ package main
 import rl "vendor:raylib"
 import "core:math"
 import "core:fmt"
+import "core:strings"
 
 SCREEN_HEIGHT :: 600
 SCREEN_WIDTH :: 300
@@ -16,7 +17,7 @@ BALL_SPEED :: 300
 BALL_R :: 10
 
 BLOCK_HEIGHT :: 15
-BLOCK_WIDTH :: 40
+BLOCK_WIDTH :: 30
 BLOCK_SPEED :: 50
 BLOCK_ADD_COUNT :: 60
 
@@ -68,6 +69,7 @@ main :: proc() {
     defer delete(blocksRec)
 
     deltaTime :f32 = 0
+    score := 0
 
     for !rl.WindowShouldClose() {
         deltaTime = rl.GetFrameTime()
@@ -122,18 +124,19 @@ main :: proc() {
 
         /*** Block Setting ***/
         if framesCounter % BLOCK_ADD_COUNT == 0 {
-            append(&blocksRec, rl.Rectangle{SCREEN_WIDTH/2, 0, BLOCK_WIDTH, BLOCK_HEIGHT})
+            append(
+                &blocksRec,
+                rl.Rectangle{
+                    f32(rl.GetRandomValue(0, SCREEN_WIDTH/BLOCK_WIDTH)) * BLOCK_WIDTH,
+                    -BLOCK_HEIGHT,
+                    BLOCK_WIDTH,
+                    BLOCK_HEIGHT
+                }
+            )
         }
         #reverse for &blockRec, index in blocksRec {
             if rl.CheckCollisionCircleRec(ballPos, BALL_R, blockRec) {
                 ballPos -= ballVec * BALL_SPEED * deltaTime
-                // Block Edge Hit Points
-                dx := (blockRec.x + blockRec.width/2) - ballPos.x
-                dy := (blockRec.y + blockRec.height/2) - ballPos.y
-                absDx := math.abs(dx)
-                absDy := math.abs(dy)
-                halfWidth := blockRec.width / 2
-                halfHeight := blockRec.height / 2
 
                 switch detect_collision_edge(blockRec, ballPos) {
                     case .RIGHT:
@@ -145,7 +148,10 @@ main :: proc() {
                     case .BOTTOM:
                         ballVec.y = -math.abs(ballVec.y)
                 }
-                ordered_remove(&blocksRec, index)
+
+                score += 100
+
+                defer ordered_remove(&blocksRec, index)
                 continue
             }
             blockRec.y += BLOCK_SPEED * deltaTime
@@ -155,22 +161,26 @@ main :: proc() {
         }
 
         /*** Draw ***/
-        rl.BeginDrawing()
-        rl.ClearBackground({255, 255, 255, 0})
+        {
+            rl.BeginDrawing()
+            defer rl.EndDrawing()
+            rl.ClearBackground({255, 255, 255, 0})
 
 
-        // Block Draw
-        for blockRec in blocksRec {
-            rl.DrawRectangleRec(blockRec, rl.GRAY)
+            // Block Draw
+            for blockRec in blocksRec {
+                rl.DrawRectangleRec(blockRec, rl.GRAY)
+            }
+
+            // Player Draw
+            rl.DrawRectangleRec(playerRec, rl.BLUE)
+
+            // Ball
+            rl.DrawCircleV(ballPos, BALL_R, rl.RED)
+
+            // Score
+            rl.DrawText(rl.TextFormat("score: %d", score), 5, 5, 20, rl.GRAY)
         }
-
-        // Player Draw
-        rl.DrawRectangleRec(playerRec, rl.BLUE)
-
-        // Ball Draw
-        rl.DrawCircleV(ballPos, BALL_R, rl.RED)
-        rl.EndDrawing()
-
     }
 
     defer rl.CloseWindow()
